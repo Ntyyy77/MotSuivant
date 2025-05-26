@@ -126,6 +126,13 @@
       color: #555;
       background-color: #f1f1f1;
     }
+
+    .error-message {
+      text-align: center;
+      color: #ffcccc;
+      font-weight: bold;
+      margin-top: 15px;
+    }
   </style>
 </head>
 <body>
@@ -154,6 +161,7 @@
     <input type="text" id="word-input" placeholder="Votre mot..." />
     <button id="check-btn">Vérifier</button>
     <button id="restart-btn">🔄 Restart</button>
+    <div class="error-message" id="error-message"></div>
   </div>
 
   <div class="rules" id="rules-text">
@@ -170,9 +178,11 @@
     const wordDisplay = document.getElementById('word-display');
     const inputField = document.getElementById('word-input');
     const introText = document.getElementById('word-intro');
+    const errorMessage = document.getElementById('error-message');
 
     let score = 0;
     let current_mot = "";
+    let current_lang = "fr";
 
     const labels = {
       fr: "Français 🇫🇷",
@@ -192,6 +202,12 @@
       es: "Tu nueva palabra es:"
     };
 
+    const errorByLang = {
+      fr: "Ce mot n'existe pas dans le dictionnaire.",
+      en: "This word is not in the dictionary.",
+      es: "Esta palabra no está en el diccionario."
+    };
+
     function updateUI(lang) {
       langBtn.textContent = labels[lang] || lang;
       rulesDiv.textContent = rulesText[lang] || "Règles non disponibles.";
@@ -199,6 +215,7 @@
     }
 
     ipcRenderer.on('language-updated', (event, lang) => {
+      current_lang = lang;
       updateUI(lang);
     });
 
@@ -213,6 +230,7 @@
         ipcRenderer.send('set-language', lang);
         score = 0;
         scoreDisplay.textContent = "Score : 0";
+        errorMessage.textContent = "";
       });
     });
 
@@ -227,17 +245,46 @@
       }
     });
 
-    document.getElementById('check-btn').addEventListener('click', () => {
-      const newWord = inputField.value.trim();
-      if (!newWord) return;
+    document.getElementById('check-btn').addEventListener('click', async () => {
+    const newWord = inputField.value.trim().toLowerCase();
+    if (!newWord) return;
 
-      current_mot = newWord;
-      wordDisplay.textContent = current_mot;
-      
-      inputField.value = "";
-      inputField.disabled = false;
-      inputField.focus();
-    });
+    const isValid = await ipcRenderer.invoke('validate-word', newWord, current_lang);
+    if (!isValid) {
+      errorMessage.textContent = errorByLang[current_lang];
+      return;
+    }
+
+    function getMatchingSuffixLength(prev, next) {
+      let max = Math.min(prev.length, next.length);
+      for (let i = max; i > 0; i--) {
+        if (prev.slice(-i) === next.slice(0, i)) {
+          return i;
+        }
+      }
+      return 0;
+    }
+
+    const points = getMatchingSuffixLength(current_mot.toLowerCase(), newWord);
+
+    if (points === 0) {
+      errorMessage.textContent = {
+        fr: "Le mot ne commence pas par la fin du mot précédent.",
+        en: "The word does not start with the end of the previous word.",
+        es: "La palabra no comienza con el final de la palabra anterior."
+      }[current_lang];
+      return;
+    }
+
+    score += points;
+    scoreDisplay.textContent = `Score : ${score}`;
+    current_mot = newWord;
+    wordDisplay.textContent = current_mot;
+
+    errorMessage.textContent = "";
+    inputField.value = "";
+    inputField.focus();
+  });
 
     document.getElementById('restart-btn').addEventListener('click', () => {
       score = 0;
@@ -245,10 +292,9 @@
       inputField.value = "";
       inputField.disabled = false;
       inputField.focus();
+      errorMessage.textContent = "";
 
-      const lang = langBtn.textContent.includes('Français') ? 'fr' :
-                   langBtn.textContent.includes('Anglais') ? 'en' : 'es';
-      ipcRenderer.send('set-language', lang);
+      ipcRenderer.send('set-language', current_lang);
     });
   </script>
 

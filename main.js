@@ -9,22 +9,24 @@ let spanishWords = [];
 function loadWords() {
   frenchWords = fs.readFileSync(path.join(__dirname, 'dico/francais.txt'), 'utf-8')
     .split('\n')
-    .map(w => w.trim())
+    .map(w => w.trim().toLowerCase())
     .filter(Boolean);
 
   englishWords = fs.readFileSync(path.join(__dirname, 'dico/anglais.txt'), 'utf-8')
     .split('\n')
-    .map(w => w.trim())
+    .map(w => w.trim().toLowerCase())
     .filter(Boolean);
 
   spanishWords = fs.readFileSync(path.join(__dirname, 'dico/espagnol.txt'), 'utf-8')
     .split('\n')
-    .map(w => w.trim())
+    .map(w => w.trim().toLowerCase())
     .filter(Boolean);
 }
 
 let currentLanguage = 'fr';
 let currentWord = '';
+
+app.disableHardwareAcceleration();
 
 function getRandomWord(lang) {
   let words;
@@ -38,7 +40,7 @@ function getRandomWord(lang) {
 }
 
 function createWindow() {
-  loadWords(); // Charger les mots une seule fois au démarrage
+  loadWords();
   currentWord = getRandomWord(currentLanguage);
 
   const win = new BrowserWindow({
@@ -60,7 +62,6 @@ function createWindow() {
   ipcMain.on('set-language', (event, lang) => {
     currentLanguage = lang;
     currentWord = getRandomWord(currentLanguage);
-    console.log('Langue changée en :', currentLanguage);
     event.sender.send('language-updated', currentLanguage);
     event.sender.send('new-word', currentWord);
   });
@@ -68,6 +69,18 @@ function createWindow() {
   ipcMain.on('update-word', (event, newWord) => {
     currentWord = newWord;
     event.sender.send('new-word', currentWord);
+  });
+
+  ipcMain.handle('validate-word', (event, word, lang) => {
+    word = word.toLowerCase().trim();
+    let words;
+    switch (lang) {
+      case 'fr': words = frenchWords; break;
+      case 'en': words = englishWords; break;
+      case 'es': words = spanishWords; break;
+      default: return false;
+    }
+    return words.includes(word);
   });
 }
 
