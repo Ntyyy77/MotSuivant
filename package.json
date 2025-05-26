@@ -1,0 +1,29 @@
+{
+  "name": "mot_suivant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ntyyy77/MotSuivant.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ntyyy77/MotSuivant/issues"
+  },
+  "homepage": "https://github.com/Ntyyy77/MotSuivant#readme",
+  "devDependencies": {
+    "electron": "^36.3.1"
+  },
+  "dependencies": {
+    "an-array-of-english-words": "^2.0.0",
+    "french-words": "^3.4.0",
+    "spanish-words": "^3.4.0",
+    "wordlist-english": "^1.2.1"
+  }
+}
